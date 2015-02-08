@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using NLog;
 using NzbDrone.Common;
 using NzbDrone.Common.Cache;
@@ -15,12 +17,15 @@ namespace NzbDrone.Core.Messaging.Commands
     {
         CommandModel Push<TCommand>(TCommand command, CommandPriority priority = CommandPriority.Normal, CommandTrigger trigger = CommandTrigger.Unspecified) where TCommand : Command;
         CommandModel Push(string commandName, DateTime? lastExecutionTime, CommandPriority priority = CommandPriority.Normal, CommandTrigger trigger = CommandTrigger.Unspecified);
-        CommandModel Pop();
+        IEnumerable<CommandModel> Queue(CancellationToken cancellationToken);
         CommandModel Get(int id);
+        List<CommandModel> GetQueued();
         List<CommandModel> GetStarted(); 
         void SetMessage(CommandModel command, string message);
-        void Completed(CommandModel command);
-        void Failed(CommandModel command, Exception e);
+        void Start(CommandModel commandModel);
+        void Complete(CommandModel command);
+        void Fail(CommandModel command, Exception e);
+        void Requeue();
     }
 
     public class CommandQueueManager : IManageCommandQueue, IHandle<ApplicationStartedEvent>
@@ -29,20 +34,20 @@ namespace NzbDrone.Core.Messaging.Commands
         private readonly IServiceFactory _serviceFactory;
         private readonly Logger _logger;
 
-        private ICached<string> _messageCache; 
-
-        private static readonly object Mutex = new object();
+        private readonly ICached<string> _messageCache;
+        private readonly BlockingCollection<CommandModel> _commandQueue; 
 
         public CommandQueueManager(ICommandRepository repo, 
-                              IServiceFactory serviceFactory,
-                              ICacheManager cacheManager,
-                              Logger logger)
+                                   IServiceFactory serviceFactory,
+                                   ICacheManager cacheManager,
+                                   Logger logger)
         {
             _repo = repo;
             _serviceFactory = serviceFactory;
             _logger = logger;
 
             _messageCache = cacheManager.GetCache<string>(GetType());
+            _commandQueue = new BlockingCollection<CommandModel>(new CommandQueue());
         }
 
         public CommandModel Push<TCommand>(TCommand command, CommandPriority priority = CommandPriority.Normal, CommandTrigger trigger = CommandTrigger.Unspecified) where TCommand : Command
@@ -51,32 +56,30 @@ namespace NzbDrone.Core.Messaging.Commands
 
             _logger.Trace("Publishing {0}", command.GetType().Name);
 
-            lock (Mutex)
+            var existingCommands = _repo.FindQueuedOrStarted(command.Name);
+            var existing = existingCommands.SingleOrDefault(c => CommandEqualityComparer.Instance.Equals(c.Body, command));
+
+            if (existing != null)
             {
-                var existingCommands = _repo.FindQueuedOrStarted(command.Name);
-                var existing = existingCommands.SingleOrDefault(c => CommandEqualityComparer.Instance.Equals(c.Body, command));
+                _logger.Trace("Command is already in progress: {0}", command.GetType().Name);
 
-                if (existing != null)
-                {
-                    _logger.Trace("Command is already in progress: {0}", command.GetType().Name);
-
-                    return existing;
-                }
-
-                var commandModel = new CommandModel
-                                   {
-                                       Name = command.Name,
-                                       Body = command,
-                                       QueuedAt = DateTime.UtcNow,
-                                       Trigger = trigger,
-                                       Priority = priority,
-                                       Status = CommandStatus.Queued
-                                   };
-
-                _repo.Insert(commandModel);
-
-                return commandModel;
+                return existing;
             }
+
+            var commandModel = new CommandModel
+            {
+                Name = command.Name,
+                Body = command,
+                QueuedAt = DateTime.UtcNow,
+                Trigger = trigger,
+                Priority = priority,
+                Status = CommandStatus.Queued
+            };
+
+            _repo.Insert(commandModel);
+            _commandQueue.Add(commandModel);
+
+            return commandModel;
         }
 
         public CommandModel Push(string commandName, DateTime? lastExecutionTime, CommandPriority priority = CommandPriority.Normal, CommandTrigger trigger = CommandTrigger.Unspecified)
@@ -85,32 +88,22 @@ namespace NzbDrone.Core.Messaging.Commands
             command.LastExecutionTime = lastExecutionTime;
             command.Trigger = trigger;
 
-            return Push(command, priority);
+            return Push(command, priority, trigger);
         }
 
-        public CommandModel Pop()
+        public IEnumerable<CommandModel> Queue(CancellationToken cancellationToken)
         {
-            lock (Mutex)
-            {
-                var nextCommand = _repo.Next();
-
-                if (nextCommand == null)
-                {
-                    return null;
-                }
-
-                nextCommand.StartedAt = DateTime.UtcNow;
-                nextCommand.Status = CommandStatus.Started;
-
-                _repo.Update(nextCommand);
-
-                return nextCommand;
-            }
+            return _commandQueue.GetConsumingEnumerable(cancellationToken);
         }
 
         public CommandModel Get(int id)
         {
             return FindMessage(_repo.Get(id));
+        }
+
+        public List<CommandModel> GetQueued()
+        {
+            return _repo.Queued();
         }
 
         public List<CommandModel> GetStarted()
@@ -123,7 +116,15 @@ namespace NzbDrone.Core.Messaging.Commands
             _messageCache.Set(command.Id.ToString(), message);
         }
 
-        public void Completed(CommandModel command)
+        public void Start(CommandModel commandModel)
+        {
+            commandModel.StartedAt = DateTime.UtcNow;
+            commandModel.Status = CommandStatus.Started;
+
+            _repo.Update(commandModel);
+        }
+
+        public void Complete(CommandModel command)
         {
             command.EndedAt = DateTime.UtcNow;
             command.Duration = command.EndedAt.Value.Subtract(command.StartedAt.Value);
@@ -134,7 +135,7 @@ namespace NzbDrone.Core.Messaging.Commands
             _messageCache.Remove(command.Id.ToString());
         }
 
-        public void Failed(CommandModel command, Exception e)
+        public void Fail(CommandModel command, Exception e)
         {
             command.EndedAt = DateTime.UtcNow;
             command.Duration = command.EndedAt.Value.Subtract(command.StartedAt.Value);
@@ -143,6 +144,22 @@ namespace NzbDrone.Core.Messaging.Commands
             _repo.Update(command);
 
             _messageCache.Remove(command.Id.ToString());
+        }
+
+        public void Requeue()
+        {
+            foreach (var command in GetQueued())
+            {
+                _commandQueue.Add(command);
+            }
+        }
+
+        public BlockingCollection<CommandModel> Queue2
+        {
+            get
+            {
+                return _commandQueue;
+            }
         }
 
         private dynamic GetCommand(string commandName)

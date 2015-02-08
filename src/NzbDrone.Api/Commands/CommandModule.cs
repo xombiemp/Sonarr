@@ -5,7 +5,6 @@ using NzbDrone.Api.Extensions;
 using NzbDrone.Api.Mapping;
 using NzbDrone.Api.Validation;
 using NzbDrone.Common;
-using NzbDrone.Common.Composition;
 using NzbDrone.Core.Datastore.Events;
 using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Messaging.Events;

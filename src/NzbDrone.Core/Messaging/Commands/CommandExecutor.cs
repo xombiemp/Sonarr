@@ -8,8 +8,7 @@ using NzbDrone.Core.ProgressMessaging;
 
 namespace NzbDrone.Core.Messaging.Commands
 {
-    public class CommandExecutor : //IHandle<CommandQueuedEvent>,
-                                   IHandle<ApplicationStartedEvent>,
+    public class CommandExecutor : IHandle<ApplicationStartedEvent>,
                                    IHandle<ApplicationShutdownRequested>
     {
         private readonly Logger _logger;
@@ -35,24 +34,15 @@ namespace NzbDrone.Core.Messaging.Commands
         {
             try
             {
-                while (!_cancellationTokenSource.IsCancellationRequested)
+                foreach (var command in _commandQueueManager.Queue(_cancellationTokenSource.Token))
                 {
-                    var command = _commandQueueManager.Pop();
-
-                    if (command != null)
+                    try
                     {
-                        try
-                        {
-                            ExecuteCommand((dynamic)command.Body, command);
-                        }
-                        catch (Exception ex)
-                        {
-                            _logger.ErrorException("Error occurred while executing task " + command.Name, ex);
-                        }
+                        ExecuteCommand((dynamic)command.Body, command);
                     }
-                    else
+                    catch (Exception ex)
                     {
-                        Thread.Sleep(50);
+                        _logger.ErrorException("Error occurred while executing task " + command.Name, ex);
                     }
                 }
             }
@@ -72,6 +62,7 @@ namespace NzbDrone.Core.Messaging.Commands
 
             try
             {
+                _commandQueueManager.Start(commandModel);
                 BroadcastCommandUpdate(commandModel);
 
                 if (!MappedDiagnosticsContext.Contains("CommandId") && command.SendUpdatesToClient)
@@ -80,12 +71,12 @@ namespace NzbDrone.Core.Messaging.Commands
                 }
 
                 handler.Execute(command);
-                _commandQueueManager.Completed(commandModel);
+                _commandQueueManager.Complete(commandModel);
                 }
             }
             catch (Exception e)
             {
-                _commandQueueManager.Failed(commandModel, e);
+                _commandQueueManager.Fail(commandModel, e);
                 throw;
             }
             finally
