@@ -1,9 +1,9 @@
 ﻿using System;
 using Marr.Data.Converters;
+using NzbDrone.Common.Extensions;
 using NzbDrone.Common.Reflection;
 using NzbDrone.Common.Serializer;
 using NzbDrone.Core.Messaging.Commands;
-using NzbDrone.Core.ThingiProvider;
 
 namespace NzbDrone.Core.Datastore.Converters
 {
@@ -13,14 +13,14 @@ namespace NzbDrone.Core.Datastore.Converters
         {
             if (context.DbValue == DBNull.Value)
             {
-                return NullConfig.Instance;
+                return null;
             }
 
             var stringValue = (string)context.DbValue;
 
-            if (string.IsNullOrWhiteSpace(stringValue))
+            if (stringValue.IsNullOrWhiteSpace())
             {
-                return NullConfig.Instance;
+                return null;
             }
 
             var ordinal = context.DataRecord.GetOrdinal("Name");
@@ -34,6 +34,5 @@ namespace NzbDrone.Core.Datastore.Converters
 
             return Json.Deserialize(stringValue, impType);
         }
-
     }
 }

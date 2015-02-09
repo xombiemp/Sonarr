@@ -29,7 +29,7 @@ namespace NzbDrone.Api.Commands
 
             GetResourceById = GetCommand;
             CreateResource = StartCommand;
-            GetResourceAll = GetAllCommands;
+            GetResourceAll = GetStartedCommands;
 
             PostValidator.RuleFor(c => c.Name).NotBlank();
         }
@@ -41,19 +41,19 @@ namespace NzbDrone.Api.Commands
 
         private int StartCommand(CommandResource commandResource)
         {
-            var commandType = 
-              _serviceFactory.GetImplementations(typeof(Command))
-                        .Single(c => c.Name.Replace("Command", "")
-                        .Equals(commandResource.Name, StringComparison.InvariantCultureIgnoreCase));
+            var commandType =
+                _serviceFactory.GetImplementations(typeof (Command))
+                               .Single(c => c.Name.Replace("Command", "")
+                                             .Equals(commandResource.Name, StringComparison.InvariantCultureIgnoreCase));
 
             dynamic command = Request.Body.FromJson(commandType);
             command.Trigger = CommandTrigger.Manual;
 
-            var trackedCommand = (CommandModel)_commandQueueManager.Push(command, CommandPriority.Normal, CommandTrigger.Manual);
+            var trackedCommand = _commandQueueManager.Push(command, CommandPriority.Normal, CommandTrigger.Manual);
             return trackedCommand.Id;
         }
 
-        private List<CommandResource> GetAllCommands()
+        private List<CommandResource> GetStartedCommands()
         {
             return ToListResource(_commandQueueManager.GetStarted());
         }

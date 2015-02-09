@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Globalization;
 using Marr.Data.Converters;
 using Marr.Data.Mapping;
 using NzbDrone.Common.Extensions;
@@ -11,12 +12,7 @@ namespace NzbDrone.Core.Datastore.Converters
         {
             if (context.DbValue == DBNull.Value)
             {
-                return DBNull.Value;
-            }
-
-            if (context.DbValue is TimeSpan)
-            {
-                return context.DbValue;
+                return TimeSpan.Zero;
             }
 
             return TimeSpan.Parse(context.DbValue.ToString());
@@ -34,7 +30,7 @@ namespace NzbDrone.Core.Datastore.Converters
                 return dbValue;
             }
 
-            return TimeSpan.Parse(dbValue.ToString());
+            return TimeSpan.Parse(dbValue.ToString(), CultureInfo.InvariantCulture);
         }
 
         public object ToDB(object clrValue)
@@ -44,7 +40,7 @@ namespace NzbDrone.Core.Datastore.Converters
                 return null;
             }
 
-            return clrValue.ToString();
+            return ((TimeSpan)clrValue).ToString("c", CultureInfo.InvariantCulture);
         }
 
         public Type DbType { get; private set; }
