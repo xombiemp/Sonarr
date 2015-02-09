@@ -26,6 +26,7 @@ namespace NzbDrone.Core.Messaging.Commands
         void Complete(CommandModel command);
         void Fail(CommandModel command, Exception e);
         void Requeue();
+        void Clean();
     }
 
     public class CommandQueueManager : IManageCommandQueue, IHandle<ApplicationStartedEvent>
@@ -113,7 +114,7 @@ namespace NzbDrone.Core.Messaging.Commands
 
         public void SetMessage(CommandModel command, string message)
         {
-            _messageCache.Set(command.Id.ToString(), message);
+            _messageCache.Set(command.Id.ToString(), message, TimeSpan.FromMinutes(5));
         }
 
         public void Start(CommandModel commandModel)
@@ -126,24 +127,14 @@ namespace NzbDrone.Core.Messaging.Commands
 
         public void Complete(CommandModel command)
         {
-            command.EndedAt = DateTime.UtcNow;
-            command.Duration = command.EndedAt.Value.Subtract(command.StartedAt.Value);
-            command.Status = CommandStatus.Completed;
-
-            _repo.Update(command);
-
-            _messageCache.Remove(command.Id.ToString());
+            Update(command, CommandStatus.Completed);
         }
 
         public void Fail(CommandModel command, Exception e)
         {
-            command.EndedAt = DateTime.UtcNow;
-            command.Duration = command.EndedAt.Value.Subtract(command.StartedAt.Value);
-            command.Status = CommandStatus.Failed;
-
-            _repo.Update(command);
-
-            _messageCache.Remove(command.Id.ToString());
+            command.Exception = e.ToString();
+            
+            Update(command, CommandStatus.Failed);
         }
 
         public void Requeue()
@@ -154,12 +145,10 @@ namespace NzbDrone.Core.Messaging.Commands
             }
         }
 
-        public BlockingCollection<CommandModel> Queue2
+        public void Clean()
         {
-            get
-            {
-                return _commandQueue;
-            }
+            _messageCache.ClearExpired();
+            _repo.Trim();
         }
 
         private dynamic GetCommand(string commandName)
@@ -177,6 +166,18 @@ namespace NzbDrone.Core.Messaging.Commands
             command.Message = _messageCache.Find(command.Id.ToString());
 
             return command;
+        }
+
+        private void Update(CommandModel command, CommandStatus status)
+        {
+            command.EndedAt = DateTime.UtcNow;
+            command.Duration = command.EndedAt.Value.Subtract(command.StartedAt.Value);
+            command.Status = status;
+
+            _repo.Update(command);
+
+            //TODO: We need to clean up these messages periodically
+            //_messageCache.Remove(command.Id.ToString());
         }
 
         public void Handle(ApplicationStartedEvent message)

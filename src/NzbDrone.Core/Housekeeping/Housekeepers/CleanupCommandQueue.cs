@@ -4,16 +4,16 @@ namespace NzbDrone.Core.Housekeeping.Housekeepers
 {
     public class CleanupCommandQueue : IHousekeepingTask
     {
-        private readonly ICommandRepository _commandRepository;
+        private readonly IManageCommandQueue _commandQueueManager;
 
-        public CleanupCommandQueue(ICommandRepository commandRepository)
+        public CleanupCommandQueue(IManageCommandQueue commandQueueManager)
         {
-            _commandRepository = commandRepository;
+            _commandQueueManager = commandQueueManager;
         }
 
         public void Clean()
         {
-            _commandRepository.Trim();
+            _commandQueueManager.Clean();
         }
     }
 }

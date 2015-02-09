@@ -12,6 +12,14 @@ namespace NzbDrone.Core.Messaging.Commands
             }
         }
 
+        public virtual string CompletionMessage
+        {
+            get
+            {
+                return "Completed";
+            }
+        }
+
         public String Name { get; private set; }
         public DateTime? LastExecutionTime { get; set; }
         public CommandTrigger Trigger { get; set; }

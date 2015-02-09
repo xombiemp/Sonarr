@@ -8,7 +8,8 @@ using NzbDrone.Core.Datastore;
 
 namespace NzbDrone.Core.Housekeeping
 {
-    public class HousekeepingService : IExecute<HousekeepingCommand>, IHandleAsync<ApplicationStartedEvent>
+    public class HousekeepingService : IExecute<HousekeepingCommand>,
+                                       IHandleAsync<ApplicationStartedEvent>
     {
         private readonly IEnumerable<IHousekeepingTask> _housekeepers;
         private readonly Logger _logger;

@@ -1,4 +1,5 @@
 ﻿using System;
+using Newtonsoft.Json;
 using NzbDrone.Api.REST;
 using NzbDrone.Core.Messaging.Commands;
 
@@ -18,6 +19,9 @@ namespace NzbDrone.Api.Commands
         public TimeSpan? Duration { get; set; }
         public string Exception { get; set; }
         public CommandTrigger Trigger { get; set; }
+
+        [JsonIgnore]
+        public string CompletionMessage { get; set; }
 
         //Legacy
         public CommandStatus State

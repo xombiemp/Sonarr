@@ -71,12 +71,20 @@ namespace NzbDrone.Core.Messaging.Commands
                 }
 
                 handler.Execute(command);
+
+                _commandQueueManager.SetMessage(commandModel, command.CompletionMessage);
                 _commandQueueManager.Complete(commandModel);
-                }
             }
-            catch (Exception e)
+            catch (CommandFailedException ex)
             {
-                _commandQueueManager.Fail(commandModel, e);
+                _commandQueueManager.SetMessage(commandModel, ex.Message);
+                _commandQueueManager.Fail(commandModel, ex);
+                throw;
+            }
+            catch (Exception ex)
+            {
+                _commandQueueManager.SetMessage(commandModel, "Failed");
+                _commandQueueManager.Fail(commandModel, ex);
                 throw;
             }
             finally
