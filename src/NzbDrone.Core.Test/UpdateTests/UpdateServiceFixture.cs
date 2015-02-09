@@ -189,7 +189,7 @@ namespace NzbDrone.Core.Test.UpdateTests
 
             GivenInstallScript("");
 
-            Subject.Execute(new ApplicationUpdateCommand());
+            Assert.Throws<CommandFailedException>(() => Subject.Execute(new ApplicationUpdateCommand()));
 
             ExceptionVerification.ExpectedErrors(1);
             Mocker.GetMock<IProcessProvider>().Verify(v => v.Start(scriptPath, It.IsAny<String>(), null, null), Times.Never());
@@ -203,7 +203,7 @@ namespace NzbDrone.Core.Test.UpdateTests
 
             GivenInstallScript(null);
 
-            Subject.Execute(new ApplicationUpdateCommand());
+            Assert.Throws<CommandFailedException>(() => Subject.Execute(new ApplicationUpdateCommand()));
 
             ExceptionVerification.ExpectedErrors(1);
             Mocker.GetMock<IProcessProvider>().Verify(v => v.Start(scriptPath, It.IsAny<String>(), null, null), Times.Never());
@@ -221,7 +221,7 @@ namespace NzbDrone.Core.Test.UpdateTests
                   .Setup(s => s.FileExists(scriptPath, StringComparison.Ordinal))
                   .Returns(false);
 
-            Subject.Execute(new ApplicationUpdateCommand());
+            Assert.Throws<CommandFailedException>(() => Subject.Execute(new ApplicationUpdateCommand()));
 
             ExceptionVerification.ExpectedErrors(1);
             Mocker.GetMock<IProcessProvider>().Verify(v => v.Start(scriptPath, It.IsAny<String>(), null, null), Times.Never());
