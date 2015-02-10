@@ -23,8 +23,8 @@ namespace NzbDrone.Core.Messaging.Commands
         List<CommandModel> GetStarted(); 
         void SetMessage(CommandModel command, string message);
         void Start(CommandModel commandModel);
-        void Complete(CommandModel command);
-        void Fail(CommandModel command, Exception e);
+        void Complete(CommandModel command, string message);
+        void Fail(CommandModel command, string message, Exception e);
         void Requeue();
         void Clean();
     }
@@ -125,16 +125,16 @@ namespace NzbDrone.Core.Messaging.Commands
             _repo.Update(commandModel);
         }
 
-        public void Complete(CommandModel command)
+        public void Complete(CommandModel command, string message)
         {
-            Update(command, CommandStatus.Completed);
+            Update(command, CommandStatus.Completed, message);
         }
 
-        public void Fail(CommandModel command, Exception e)
+        public void Fail(CommandModel command, string message, Exception e)
         {
             command.Exception = e.ToString();
             
-            Update(command, CommandStatus.Failed);
+            Update(command, CommandStatus.Failed, message);
         }
 
         public void Requeue()
@@ -168,8 +168,10 @@ namespace NzbDrone.Core.Messaging.Commands
             return command;
         }
 
-        private void Update(CommandModel command, CommandStatus status)
+        private void Update(CommandModel command, CommandStatus status, string message)
         {
+            SetMessage(command, message);
+
             command.EndedAt = DateTime.UtcNow;
             command.Duration = command.EndedAt.Value.Subtract(command.StartedAt.Value);
             command.Status = status;

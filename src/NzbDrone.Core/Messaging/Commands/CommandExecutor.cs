@@ -65,26 +65,24 @@ namespace NzbDrone.Core.Messaging.Commands
                 _commandQueueManager.Start(commandModel);
                 BroadcastCommandUpdate(commandModel);
 
-                if (!MappedDiagnosticsContext.Contains("CommandId") && command.SendUpdatesToClient)
+                if (!MappedDiagnosticsContext.Contains("CommandId"))
                 {
                     MappedDiagnosticsContext.Set("CommandId", commandModel.Id.ToString());
                 }
 
                 handler.Execute(command);
 
-                _commandQueueManager.SetMessage(commandModel, command.CompletionMessage);
-                _commandQueueManager.Complete(commandModel);
+                _commandQueueManager.Complete(commandModel, command.CompletionMessage);
             }
             catch (CommandFailedException ex)
             {
-                _commandQueueManager.SetMessage(commandModel, ex.Message);
-                _commandQueueManager.Fail(commandModel, ex);
+                _commandQueueManager.Fail(commandModel, ex.Message, ex);
                 throw;
             }
             catch (Exception ex)
             {
                 _commandQueueManager.SetMessage(commandModel, "Failed");
-                _commandQueueManager.Fail(commandModel, ex);
+                _commandQueueManager.Fail(commandModel, "Failed", ex);
                 throw;
             }
             finally
