@@ -13,7 +13,7 @@ namespace NzbDrone.Core.Housekeeping.Housekeepers
 
         public void Clean()
         {
-            _commandQueueManager.Clean();
+            _commandQueueManager.CleanCommands();
         }
     }
 }

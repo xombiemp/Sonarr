@@ -26,7 +26,8 @@ namespace NzbDrone.Core.Messaging.Commands
         void Complete(CommandModel command, string message);
         void Fail(CommandModel command, string message, Exception e);
         void Requeue();
-        void Clean();
+        void CleanCommands();
+        void CleanMessages();
     }
 
     public class CommandQueueManager : IManageCommandQueue, IHandle<ApplicationStartedEvent>
@@ -145,10 +146,14 @@ namespace NzbDrone.Core.Messaging.Commands
             }
         }
 
-        public void Clean()
+        public void CleanCommands()
+        {
+            _repo.Trim();
+        }
+
+        public void CleanMessages()
         {
             _messageCache.ClearExpired();
-            _repo.Trim();
         }
 
         private dynamic GetCommand(string commandName)

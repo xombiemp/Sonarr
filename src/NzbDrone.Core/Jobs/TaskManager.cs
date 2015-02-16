@@ -10,9 +10,9 @@ using NzbDrone.Core.Download;
 using NzbDrone.Core.HealthCheck;
 using NzbDrone.Core.Housekeeping;
 using NzbDrone.Core.Indexers;
-using NzbDrone.Core.Instrumentation.Commands;
 using NzbDrone.Core.Lifecycle;
 using NzbDrone.Core.MediaFiles.Commands;
+using NzbDrone.Core.Messaging.Commands;
 using NzbDrone.Core.Messaging.Events;
 using NzbDrone.Core.Tv.Commands;
 using NzbDrone.Core.Update.Commands;
@@ -62,6 +62,7 @@ namespace NzbDrone.Core.Jobs
             var defaultTasks = new[]
                 {
                     new ScheduledTask{ Interval = 1, TypeName = typeof(CheckForFinishedDownloadCommand).FullName},
+                    new ScheduledTask{ Interval = 1, TypeName = typeof(CommandMessagingCleanupCommand).FullName},
                     new ScheduledTask{ Interval = 6*60, TypeName = typeof(ApplicationUpdateCommand).FullName},
                     new ScheduledTask{ Interval = 3*60, TypeName = typeof(UpdateSceneMappingCommand).FullName},
                     new ScheduledTask{ Interval = 6*60, TypeName = typeof(CheckHealthCommand).FullName},
