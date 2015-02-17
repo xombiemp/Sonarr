@@ -602,7 +602,7 @@
     <Compile Include="Messaging\Commands\CommandEqualityComparer.cs" />
     <Compile Include="Messaging\Commands\CommandExecutor.cs" />
     <Compile Include="Messaging\Commands\CommandFailedException.cs" />
-    <Compile Include="Messaging\Commands\CommandMessagingCleanupCommand.cs" />
+    <Compile Include="Messaging\Commands\MessagingCleanupCommand.cs" />
     <Compile Include="Messaging\Commands\CommandModel.cs" />
     <Compile Include="Messaging\Commands\CommandPriority.cs" />
     <Compile Include="Messaging\Commands\CommandNotFoundException.cs" />

@@ -1,6 +1,6 @@
 ﻿namespace NzbDrone.Core.Messaging.Commands
 {
-    public class CleanupCommandMessagingService : IExecute<CommandMessagingCleanupCommand>
+    public class CleanupCommandMessagingService : IExecute<MessagingCleanupCommand>
     {
         private readonly IManageCommandQueue _commandQueueManager;
 
@@ -9,7 +9,7 @@
             _commandQueueManager = commandQueueManager;
         }
 
-        public void Execute(CommandMessagingCleanupCommand message)
+        public void Execute(MessagingCleanupCommand message)
         {
             _commandQueueManager.CleanMessages();
         }
