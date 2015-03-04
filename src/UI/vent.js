@@ -21,6 +21,7 @@ vent.Commands = {
     SaveSettings             : 'saveSettings',
     ShowLogFile              : 'showLogFile',
     ShowRenamePreview        : 'showRenamePreview',
+    ShowManualImport         : 'showManualImport',
     ShowFileBrowser          : 'showFileBrowser',
     CloseFileBrowser         : 'closeFileBrowser',
     OpenControlPanelCommand  : 'OpenControlPanelCommand',

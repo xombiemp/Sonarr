@@ -1,4 +1,5 @@
 var _ = require('underscore');
+var vent = require('../../vent');
 var Marionette = require('marionette');
 var Backgrid = require('backgrid');
 var MissingCollection = require('./MissingCollection');
@@ -12,6 +13,7 @@ var ToolbarLayout = require('../../Shared/Toolbar/ToolbarLayout');
 var LoadingView = require('../../Shared/LoadingView');
 var Messenger = require('../../Shared/Messenger');
 var CommandController = require('../../Commands/CommandController');
+
 require('backgrid.selectall');
 require('../../Mixins/backbone.signalr.mixin');
 
@@ -119,11 +121,16 @@ module.exports = Marionette.Layout.extend({
                     route : 'seasonpass'
                 },
                 {
-                    title   : 'Rescan Drone Factory Folder',
-                    icon    : 'icon-sonarr-refresh',
-                    command : 'downloadedepisodesscan',
-
+                    title      : 'Rescan Drone Factory Folder',
+                    icon       : 'icon-sonarr-refresh',
+                    command    : 'downloadedepisodesscan',
                     properties : { sendUpdates : true }
+                },
+                {
+                    title        : 'Manual Import',
+                    icon         : 'icon-sonarr-search-manual',
+                    callback     : this._manualImport,
+                    ownerContext : this
                 }
             ]
         };
@@ -163,6 +170,7 @@ module.exports = Marionette.Layout.extend({
             command : { name : 'missingEpisodeSearch' }
         });
     },
+
     _setFilter      : function(buttonContext) {
         var mode = buttonContext.model.get('key');
         this.collection.state.currentPage = 1;
@@ -171,6 +179,7 @@ module.exports = Marionette.Layout.extend({
             buttonContext.ui.icon.spinForPromise(promise);
         }
     },
+
     _searchSelected : function() {
         var selected = this.missingGrid.getSelectedModels();
         if (selected.length === 0) {
@@ -186,10 +195,15 @@ module.exports = Marionette.Layout.extend({
             episodeIds : ids
         });
     },
+
     _searchMissing  : function() {
         if (window.confirm('Are you sure you want to search for {0} missing episodes? '.format(this.collection.state.totalRecords) +
                            'One API request to each indexer will be used for each episode. ' + 'This cannot be stopped once started.')) {
             CommandController.Execute('missingEpisodeSearch', { name : 'missingEpisodeSearch' });
         }
+    },
+
+    _manualImport : function () {
+        vent.trigger(vent.Commands.ShowManualImport);
     }
 });

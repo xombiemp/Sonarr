@@ -1,0 +1,27 @@
+@import "../Shared/Styles/card.less";
+@import "../Shared/Styles/clickable.less";
+
+.manual-import-modal {
+  .collection-list {
+
+    padding-left : 0px;
+
+    &:focus {
+      outline-color : rgba(255, 255, 255, 0);
+    }
+
+    li {
+      .card();
+      .clickable();
+      list-style-type : none
+    }
+
+    .selected {
+      background-color : #f0f0f0;
+    }
+  }
+
+  .select-episode-row {
+    .clickable()
+  }
+}
